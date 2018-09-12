@@ -89,16 +89,14 @@ add_library(
 add_executable(
   ${PROJECT_NAME}
   src/phoxi_camera_node.cpp
-  src/PhoXiInterface.cpp
-  src/RosInterface.cpp
 )
 
 add_dependencies(
   ${PROJECT_NAME}_Ros_Interface
-  ${PROJECT_NAME}/_PhoXi_Interfece
   ${PROJECT_NAME}_gencfgv
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
+  ${PROJECT_NAME}_PhoXi_Interface
 )
 
 add_dependencies(
@@ -106,52 +104,24 @@ add_dependencies(
   ${PROJECT_NAME}_gencfgv
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
+  ${PROJECT_NAME}_Ros_Interface
 )
 
 target_link_libraries(
   ${PROJECT_NAME}_PhoXi_Interface
   ${PHOXI_LIBRARY}
-  rt
-  ${Boost_LIBRARIES}
 )
 target_link_libraries(
   ${PROJECT_NAME}_Ros_Interface
   ${PROJECT_NAME}_PhoXi_Interface
+  ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
-
 )
 
 target_link_libraries(
   ${PROJECT_NAME}
-  debug ${catkin_LIBRARIES}
-  optimized ${catkin_LIBRARIES}
-  ${PHOXI_LIBRARY}
-  ${Boost_LIBRARIES}
-  rt
-)
-
-install(
-  PROGRAMS
-    src/phoxi_camera_example.py
-    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
- )
-
-install(
-  TARGETS
-    ${PROJECT_NAME}
-  ARCHIVE
-    DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY
-    DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME
-    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
-
-install(
-  FILES
-    ${PHOXI_LIB_RELEASE_PER_COMPILER}.${PHO_SOFTWARE_VERSION}
-  DESTINATION
-    ${CATKIN_PACKAGE_LIB_DESTINATION}
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}_Ros_Interface
 )
 
 install(PROGRAMS
