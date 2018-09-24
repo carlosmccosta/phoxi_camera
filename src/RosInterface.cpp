@@ -519,7 +519,7 @@ void RosInterface::diagnosticCallback(diagnostic_updater::DiagnosticStatusWrappe
 
     }
     else{
-        status.summary(diagnostic_msgs::DiagnosticStatus::ERROR,"Not connected. ");
+        status.summary(diagnostic_msgs::DiagnosticStatus::ERROR,"Not connected");
     }
 }
 
