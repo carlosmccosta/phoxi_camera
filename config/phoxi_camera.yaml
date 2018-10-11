@@ -1,6 +1,6 @@
 scanner_id: "InstalledExamples-PhoXi-example"
 frame_id: "PhoXi3Dscanner_sensor"
-latch_tipics: true
+latch_tipics: false
 topic_queue_size: 1
 init_from_config: false # if true all following parameters will be inicialized from this config otherwise from PohXi control application.
 # All following parameters are for PhoXi Control and they can override all dynamic_reconfigure parameters in cfg file.
