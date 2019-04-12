@@ -9,6 +9,8 @@
 //ros
 #include <ros/ros.h>
 #include <ros/callback_queue.h>
+#include <camera_info_manager/camera_info_manager.h>
+#include <image_transport/image_transport.h>
 
 //dynamic reconfigure
 #include <dynamic_reconfigure/server.h>
@@ -98,9 +100,11 @@ private:
     ros::Publisher cloudPub;
     ros::Publisher normalMapPub;
     ros::Publisher confidenceMapPub;
-    ros::Publisher rawTexturePub;
-    ros::Publisher rgbTexturePub;
     ros::Publisher depthMapPub;
+    ros::Publisher rawTexturePub;
+    image_transport::ImageTransport mono8ImageTransport;
+    camera_info_manager::CameraInfoManager mono8CameraInfoManager;
+    image_transport::CameraPublisher mono8CameraPublisher;
 
     //dynamic reconfigure
     boost::recursive_mutex dynamicReconfigureMutex;

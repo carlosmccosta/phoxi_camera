@@ -19,6 +19,8 @@ find_package(catkin REQUIRED
     geometry_msgs
     eigen_conversions
     cv_bridge
+    camera_info_manager
+    image_transport
 )
 
 catkin_python_setup()

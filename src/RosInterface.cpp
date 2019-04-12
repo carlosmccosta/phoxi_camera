@@ -12,7 +12,11 @@
 #include <eigen_conversions/eigen_msg.h>
 #include <cv_bridge/cv_bridge.h>
 
-RosInterface::RosInterface() : nh("~"), dynamicReconfigureServer(dynamicReconfigureMutex,nh), PhoXi3DscannerDiagnosticTask("PhoXi3Dscanner",boost::bind(&RosInterface::diagnosticCallback, this, _1)) {
+RosInterface::RosInterface() : nh("~"), mono8ImageTransport(nh), mono8CameraInfoManager(nh), dynamicReconfigureServer(dynamicReconfigureMutex,nh), PhoXi3DscannerDiagnosticTask("PhoXi3Dscanner",boost::bind(&RosInterface::diagnosticCallback, this, _1)) {
+
+    std::string scannerId;
+    nh.param<std::string>("scanner_id", scannerId, "InstalledExamples-basic-example");
+    nh.param<std::string>("frame_id", frameId, "PhoXi3Dscanner_sensor");
 
     //create service servers
     getDeviceListService = nh.advertiseService("get_device_list", &RosInterface::getDeviceList, this);
@@ -42,9 +46,35 @@ RosInterface::RosInterface() : nh("~"), dynamicReconfigureServer(dynamicReconfig
     cloudPub = nh.advertise <pcl::PointCloud<pcl::PointXYZ >>("pointcloud", 1,latch_topics);
     normalMapPub = nh.advertise < sensor_msgs::Image > ("normal_map", topic_queue_size,latch_topics);
     confidenceMapPub = nh.advertise < sensor_msgs::Image > ("confidence_map", topic_queue_size,latch_topics);
-    rawTexturePub = nh.advertise < sensor_msgs::Image > ("texture", topic_queue_size,latch_topics);
-    rgbTexturePub = nh.advertise < sensor_msgs::Image > ("rgb_texture", topic_queue_size,latch_topics);
     depthMapPub = nh.advertise < sensor_msgs::Image > ("depth_map", topic_queue_size,latch_topics);
+    rawTexturePub = nh.advertise < sensor_msgs::Image > ("texture", topic_queue_size,latch_topics);
+
+    std::string camera_info_url;
+    nh.param<std::string>("camera_info_url", camera_info_url, "");
+    if (camera_info_url.empty())
+    {
+        ROS_WARN("Missing camera_info_url.");
+    }
+    else
+    {
+        mono8CameraInfoManager.setCameraName(scannerId);
+        if (mono8CameraInfoManager.validateURL(camera_info_url) && mono8CameraInfoManager.loadCameraInfo(camera_info_url))
+        {
+            ROS_INFO("Loaded camera calibration from %s", camera_info_url.c_str());
+        }
+        else
+        {
+            ROS_INFO("Failed to load camera calibration from %s", camera_info_url.c_str());
+        }
+    }
+
+    std::string image_base_topic;
+    nh.param<std::string>("image_base_topic", image_base_topic, "image_raw");
+    int image_queue_size;
+    nh.param<int>("image_queue_size", image_queue_size, 3);
+    bool image_latched_publisher;
+    nh.param<bool>("image_latched_publisher", image_latched_publisher, false);
+    mono8CameraPublisher = mono8ImageTransport.advertiseCamera(image_base_topic, image_queue_size, image_latched_publisher);
 
     //set dynamic reconfigure callback
     dynamicReconfigureServer.setCallback(boost::bind(&RosInterface::dynamicReconfigureCallback,this, _1, _2));
@@ -56,9 +86,6 @@ RosInterface::RosInterface() : nh("~"), dynamicReconfigureServer(dynamicReconfig
     diagnosticTimer.start();
 
     //connect to default scanner
-    std::string scannerId;
-    nh.param<std::string>("scanner_id", scannerId, "InstalledExamples-basic-example");
-    nh.param<std::string>("frame_id", frameId, "PhoXi3Dscanner_sensor");
 
     try {
         RosInterface::connectCamera(scannerId);
@@ -304,10 +331,11 @@ void RosInterface::publishFrame(PFramePostProcessed frame) {
                                    frame->PFrame->Texture.operator[](0));
             rawTexturePub.publish(texture);
 
-            cv::Mat cvRgbTexture;
-            cv::cvtColor(frame->TextureAfterPostProcessing, cvRgbTexture, CV_GRAY2RGB);
-            cv_bridge::CvImage rgbTexture(header, sensor_msgs::image_encodings::BGR8, cvRgbTexture);
-            rgbTexturePub.publish(rgbTexture.toImageMsg());
+            cv_bridge::CvImage mono8Texture(header, sensor_msgs::image_encodings::MONO8, frame->TextureAfterPostProcessing);
+            sensor_msgs::ImagePtr mono8_image_msg = mono8Texture.toImageMsg();
+            sensor_msgs::CameraInfo camera_info = mono8CameraInfoManager.getCameraInfo();
+            camera_info.header = mono8_image_msg->header;
+            mono8CameraPublisher.publish(*mono8_image_msg, camera_info);
         }
     }
 
