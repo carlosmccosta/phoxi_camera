@@ -1,5 +1,5 @@
-scanner_id: "InstalledExamples-basic-example"
-frame_id: "PhoXi3Dscanner_sensor"
+scanner_id: "1711010"
+frame_id: "camera_optical_frame"
 latch_topics: true
 topic_queue_size: 1
 init_from_config: false # if true all following parameters will be inicialized from this config otherwise from PhoXi control application.
