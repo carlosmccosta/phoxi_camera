@@ -143,6 +143,7 @@ std::shared_ptr<pcl::PointCloud<pcl::PointXYZRGBNormal>> PhoXiInterface::getPoin
             }
         }
     }
+    cloud->is_dense = generatePointCloudWithOnlyValidPoints;
     return cloud;
 }
 
