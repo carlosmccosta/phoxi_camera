@@ -78,7 +78,7 @@ PFramePostProcessed PhoXiInterface::postProcessFrame(pho::api::PFrame frame) {
         frameProcessed->TextureAfterPostProcessing = cv::Mat(frameProcessed->PFrame->Texture.Size.Height, frameProcessed->PFrame->Texture.Size.Width, CV_32FC1, frameProcessed->PFrame->Texture.operator[](0));
         bool useAutoMinMax = textureMinIntensity < 0.0f || textureMaxIntensity <= 0.0f || textureMinIntensity >= textureMaxIntensity;
         if (useAutoMinMax) {
-            cv::normalize(frameProcessed->TextureAfterPostProcessing, frameProcessed->TextureAfterPostProcessing, 0, 255, CV_MINMAX, CV_8U);
+            cv::normalize(frameProcessed->TextureAfterPostProcessing, frameProcessed->TextureAfterPostProcessing, 0, 255, cv::NORM_MINMAX, CV_8U);
         } else {
             double scale = (std::numeric_limits<uint8_t>::max()) * (1.0 / (textureMaxIntensity - textureMinIntensity));
             double shift = textureMinIntensity - (textureMinIntensity * scale);
