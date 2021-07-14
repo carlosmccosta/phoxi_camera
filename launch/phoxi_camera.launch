@@ -6,8 +6,9 @@
     <arg name="config" default="$(find phoxi_camera)/config/phoxi_camera.yaml"/>
     <arg name="pointcloud_topic" default="/camera/depth_registered/points"/>
     <arg name="generate_point_cloud_with_only_valid_points" default="true"/>
+    <arg name="enable_respawn" default="true" />
 
-    <node pkg="phoxi_camera" type="phoxi_camera" name="phoxi_camera" output="screen" clear_params="true">
+    <node pkg="phoxi_camera" type="phoxi_camera" name="phoxi_camera" output="screen" clear_params="true" respawn="$(arg enable_respawn)">
         <param name="scanner_id" type="str" value="$(arg scanner_id)"/>
         <param name="frame_id" type="str" value="$(arg frame_id)"/>
         <param name="latch_topics" type="bool" value="$(arg latch_topics)"/>
