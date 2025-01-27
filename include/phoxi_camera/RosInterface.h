@@ -24,6 +24,8 @@
 #include <diagnostic_updater/diagnostic_updater.h>
 
 //messages
+#include <sensor_msgs/CameraInfo.h>
+#include <sensor_msgs/distortion_models.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/fill_image.h>
@@ -171,7 +173,11 @@ namespace phoxi_camera {
         ros::Publisher confidenceMapPub;
         ros::Publisher rawTexturePub;
         ros::Publisher rgbTexturePub;
+        ros::Publisher rawColorCameraPub;
+        ros::Publisher colorCameraPub;
         ros::Publisher depthMapPub;
+        ros::Publisher cameraInfoPub;
+        ros::Publisher cameraInfoColorCameraPub;
 
         //dynamic reconfigure
         boost::recursive_mutex dynamicReconfigureMutex;

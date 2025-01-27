@@ -93,7 +93,7 @@ catkin_package(
 )
 
 add_compile_options(-w)
-add_compile_options(-std=c++11)
+add_compile_options(-std=c++14)
 add_compile_options(-fpermissive)
 add_compile_options(-pthread)
 add_compile_options(-O2)

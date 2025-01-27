@@ -46,7 +46,11 @@ namespace phoxi_camera {
         confidenceMapPub = nh.advertise<sensor_msgs::Image>("confidence_map", topic_queue_size, latch_topics);
         rawTexturePub = nh.advertise<sensor_msgs::Image>("texture", topic_queue_size, latch_topics);
         rgbTexturePub = nh.advertise<sensor_msgs::Image>("rgb_texture", topic_queue_size, latch_topics);
+        rawColorCameraPub = nh.advertise<sensor_msgs::Image>("color_camera", topic_queue_size, latch_topics);
+        colorCameraPub = nh.advertise<sensor_msgs::Image>("rgb_color_camera", topic_queue_size, latch_topics);
         depthMapPub = nh.advertise<sensor_msgs::Image>("depth_map", topic_queue_size, latch_topics);
+        cameraInfoPub = nh.advertise<sensor_msgs::CameraInfo>("texture_camera_info", topic_queue_size, latch_topics);
+        cameraInfoColorCameraPub = nh.advertise<sensor_msgs::CameraInfo>("color_camera_camera_info", topic_queue_size, latch_topics);
 
         //set diagnostic Hw id
         diagnosticUpdater.setHardwareID("none");
@@ -377,6 +381,22 @@ namespace phoxi_camera {
             cv::cvtColor(cvRgbTexture, cvRgbTexture, CV_HSV2RGB);
             cv_bridge::CvImage rgbTexture(header, sensor_msgs::image_encodings::RGB8, cvRgbTexture);
             rgbTexturePub.publish(rgbTexture.toImageMsg());
+
+            sensor_msgs::CameraInfo info;
+            info.header = header;
+            info.width = texture.width;
+            info.height = texture.height;
+            info.distortion_model = sensor_msgs::distortion_models::PLUMB_BOB;
+            for (std::size_t r = 0; r < 3; ++r) {
+              for (std::size_t c = 0; c < 3; ++c) {
+                info.K[c + r * 3] = scanner->CalibrationSettings->CameraMatrix.At(r, c);
+                info.P[c + r * 4] = scanner->CalibrationSettings->CameraMatrix.At(r, c);
+                if (r == c)
+                  info.R[c + r * 3] = 1.0;
+              }
+            }
+            info.D = scanner->CalibrationSettings->DistortionCoefficients;
+            cameraInfoPub.publish(info);
         } else if (!(frame->Texture.Empty())) {
             sensor_msgs::Image texture;
             texture.header = header;
@@ -396,8 +416,66 @@ namespace phoxi_camera {
             cv::cvtColor(cvGreyTexture, cvRgbTexture, CV_GRAY2RGB);
             cv_bridge::CvImage rgbTexture(header, sensor_msgs::image_encodings::RGB8, cvRgbTexture);
             rgbTexturePub.publish(rgbTexture.toImageMsg());
+
+            sensor_msgs::CameraInfo info;
+            info.header = header;
+            info.width = texture.width;
+            info.height = texture.height;
+            info.distortion_model = sensor_msgs::distortion_models::PLUMB_BOB;
+            for (std::size_t r = 0; r < 3; ++r) {
+              for (std::size_t c = 0; c < 3; ++c) {
+                info.K[c + r * 3] = scanner->CalibrationSettings->CameraMatrix.At(r, c);
+                info.P[c + r * 4] = scanner->CalibrationSettings->CameraMatrix.At(r, c);
+                if (r == c)
+                  info.R[c + r * 3] = 1.0;
+              }
+            }
+            info.D = scanner->CalibrationSettings->DistortionCoefficients;
+            cameraInfoPub.publish(info);
         } else {
             ROS_WARN("Empty texture!");
+        }
+
+        if (frame->ColorCameraImage.Empty()) {
+            ROS_WARN("Empty ColorCameraImage!");
+        } else {
+            sensor_msgs::Image texture;
+            texture.header.stamp = header.stamp;
+            texture.header.frame_id = frameId + "_color";
+            texture.encoding = sensor_msgs::image_encodings::TYPE_16UC3;
+            sensor_msgs::fillImage(texture, sensor_msgs::image_encodings::TYPE_16UC3,
+                                   frame->ColorCameraImage.Size.Height, // height
+                                   frame->ColorCameraImage.Size.Width, // width
+                                   frame->ColorCameraImage.Size.Width * sizeof(uint16_t), // stepSize
+                                   frame->ColorCameraImage.operator[](0));
+            rawColorCameraPub.publish(texture);
+            cv::Mat cvRgbTexture(frame->ColorCameraImage.Size.Height, frame->ColorCameraImage.Size.Width, CV_16UC3, frame->ColorCameraImage.operator[](0));
+            cv::normalize(cvRgbTexture, cvRgbTexture, 0, 255, CV_MINMAX);
+            cvRgbTexture.convertTo(cvRgbTexture, CV_8UC3);
+            cv::cvtColor(cvRgbTexture, cvRgbTexture, CV_RGB2HSV);
+            cv::Mat cvHSVChannelsSplit[3];
+            cv::split(cvRgbTexture, cvHSVChannelsSplit);
+            cv::equalizeHist(cvHSVChannelsSplit[2], cvHSVChannelsSplit[2]);
+            cv::merge(cvHSVChannelsSplit, 3, cvRgbTexture);
+            cv::cvtColor(cvRgbTexture, cvRgbTexture, CV_HSV2RGB);
+            cv_bridge::CvImage rgbTexture(texture.header, sensor_msgs::image_encodings::RGB8, cvRgbTexture);
+            colorCameraPub.publish(rgbTexture.toImageMsg());
+
+            sensor_msgs::CameraInfo info;
+            info.header = texture.header;
+            info.width = texture.width;
+            info.height = texture.height;
+            info.distortion_model = sensor_msgs::distortion_models::PLUMB_BOB;
+            for (std::size_t r = 0; r < 3; ++r) {
+              for (std::size_t c = 0; c < 3; ++c) {
+                info.K[c + r * 3] = scanner->ColorCameraCalibrationSettings->CalibrationSettings.CameraMatrix.At(r, c);
+                info.P[c + r * 4] = scanner->ColorCameraCalibrationSettings->CalibrationSettings.CameraMatrix.At(r, c);
+                if (r == c)
+                  info.R[c + r * 3] = 1.0;
+              }
+            }
+            info.D = scanner->ColorCameraCalibrationSettings->CalibrationSettings.DistortionCoefficients;
+            cameraInfoColorCameraPub.publish(info);
         }
 
         if (frame->ConfidenceMap.Empty()) {
