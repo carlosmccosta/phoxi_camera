@@ -14,6 +14,9 @@
 #include <eigen_conversions/eigen_msg.h>
 #include <pcl/point_types.h>
 #include <pcl_ros/point_cloud.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2_ros/transform_broadcaster.h>
 
 //dynamic reconfigure
 #include <dynamic_reconfigure/server.h>
@@ -24,6 +27,7 @@
 #include <diagnostic_updater/diagnostic_updater.h>
 
 //messages
+#include <geometry_msgs/TransformStamped.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/distortion_models.h>
 #include <sensor_msgs/Image.h>
@@ -178,6 +182,7 @@ namespace phoxi_camera {
         ros::Publisher depthMapPub;
         ros::Publisher cameraInfoPub;
         ros::Publisher cameraInfoColorCameraPub;
+        tf2_ros::TransformBroadcaster transformBroadcaster;
 
         //dynamic reconfigure
         boost::recursive_mutex dynamicReconfigureMutex;

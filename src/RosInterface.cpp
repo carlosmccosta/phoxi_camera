@@ -476,6 +476,31 @@ namespace phoxi_camera {
             }
             info.D = scanner->ColorCameraCalibrationSettings->CalibrationSettings.DistortionCoefficients;
             cameraInfoColorCameraPub.publish(info);
+
+            geometry_msgs::TransformStamped transformStamped;
+            transformStamped.header.stamp = header.stamp;
+            transformStamped.header.frame_id = frameId;
+            transformStamped.child_frame_id = frameId + "_color";
+            transformStamped.transform.translation.x = scanner->ColorCameraCalibrationSettings->CoordinateTransformation.Translation.x * 0.001;
+            transformStamped.transform.translation.y = scanner->ColorCameraCalibrationSettings->CoordinateTransformation.Translation.y * 0.001;
+            transformStamped.transform.translation.z = scanner->ColorCameraCalibrationSettings->CoordinateTransformation.Translation.z * 0.001;
+            tf2::Matrix3x3 matrix(
+                scanner->ColorCameraCalibrationSettings->CoordinateTransformation.Rotation.At(0,0),
+                scanner->ColorCameraCalibrationSettings->CoordinateTransformation.Rotation.At(0,1),
+                scanner->ColorCameraCalibrationSettings->CoordinateTransformation.Rotation.At(0,2),
+                scanner->ColorCameraCalibrationSettings->CoordinateTransformation.Rotation.At(1,0),
+                scanner->ColorCameraCalibrationSettings->CoordinateTransformation.Rotation.At(1,1),
+                scanner->ColorCameraCalibrationSettings->CoordinateTransformation.Rotation.At(1,2),
+                scanner->ColorCameraCalibrationSettings->CoordinateTransformation.Rotation.At(2,0),
+                scanner->ColorCameraCalibrationSettings->CoordinateTransformation.Rotation.At(2,1),
+                scanner->ColorCameraCalibrationSettings->CoordinateTransformation.Rotation.At(2,2));
+            tf2::Quaternion quaternion;
+            matrix.getRotation(quaternion);
+            transformStamped.transform.rotation.x = quaternion.x();
+            transformStamped.transform.rotation.y = quaternion.y();
+            transformStamped.transform.rotation.z = quaternion.z();
+            transformStamped.transform.rotation.w = quaternion.w();
+            transformBroadcaster.sendTransform(transformStamped);
         }
 
         if (frame->ConfidenceMap.Empty()) {
