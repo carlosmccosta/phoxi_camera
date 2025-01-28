@@ -80,68 +80,50 @@ namespace phoxi_camera {
         return scanner->GetSpecificFrame(id, 10000);
     }
 
-    std::shared_ptr<pcl::PointCloud<pcl::PointNormal>> PhoXiInterface::getPointCloud(bool organized) {
+    std::shared_ptr<pcl::PointCloud<pcl::PointXYZRGBNormal>> PhoXiInterface::getPointCloud(bool organized) {
         return getPointCloudFromFrame(getPFrame(-1), organized);
     }
 
-    std::shared_ptr<pcl::PointCloud<pcl::PointNormal>> PhoXiInterface::getPointCloudFromFrame(pho::api::PFrame frame, bool organized) {
-        if (organized) {
-            return getOrganizedCloudFromFrame(frame);
+    std::shared_ptr<pcl::PointCloud<pcl::PointXYZRGBNormal>> PhoXiInterface::getPointCloudFromFrame(pho::api::PFrame frame, bool organized) {
+        if (!frame || !frame->Successful) {
+            throw CorruptedFrame("Corrupted frame!");
         }
-        return getUnorganizedCloudFromFrame(frame);
+
+        std::shared_ptr<pcl::PointCloud<pcl::PointXYZRGBNormal>> organizedCloud(new pcl::PointCloud<pcl::PointXYZRGBNormal>());
+
+        if (pho::api::pcls::toPCLPointCloud<pcl::PointXYZRGBNormal>(*frame, *organizedCloud)) {
+            for (auto & i : *organizedCloud) {
+                i.x *= 0.001;
+                i.y *= 0.001;
+                i.z *= 0.001;
+            }
+
+            if (organized) {
+                return organizedCloud;
+            } else {
+                std::shared_ptr<pcl::PointCloud<pcl::PointXYZRGBNormal>> unorganizedCloud(new pcl::PointCloud<pcl::PointXYZRGBNormal>());
+                for (int r = 0; r < frame->GetResolution().Height; r++) {
+                    for (int c = 0; c < frame->GetResolution().Width; c++) {
+                        auto point = frame->PointCloud.At(r, c);
+                        if (point != pho::api::Point3_32f(0, 0, 0)) {
+                            unorganizedCloud->push_back(organizedCloud->at(c,r));
+                        }
+                    }
+                }
+                return unorganizedCloud;
+            }
+        }
+
+        throw CorruptedFrame("Corrupted frame!");
     }
 
-    std::shared_ptr<pcl::PointCloud<pcl::PointNormal>>
+    std::shared_ptr<pcl::PointCloud<pcl::PointXYZRGBNormal>>
     PhoXiInterface::getOrganizedCloudFromFrame(pho::api::PFrame frame) {
-        if (!frame || !frame->Successful) {
-            throw CorruptedFrame("Corrupted frame!");
-        }
-        std::shared_ptr<pcl::PointCloud<pcl::PointNormal>> cloud(
-                new pcl::PointCloud<pcl::PointNormal>(frame->GetResolution().Width, frame->GetResolution().Height));
-        for (int r = 0; r < frame->GetResolution().Height; r++) {
-            for (int c = 0; c < frame->GetResolution().Width; c++) {
-                auto point = frame->PointCloud.At(r, c);
-                pcl::PointNormal pclPoint;
-                pclPoint.x = point.x / 1000;                 //to [m]
-                pclPoint.y = point.y / 1000;                 //to [m]
-                pclPoint.z = point.z / 1000;                 //to [m]
-                if (!frame->NormalMap.Empty()) {
-                    auto normal = frame->NormalMap.At(r, c);
-                    pclPoint.normal_x = normal.x / 1000;    //to [m]
-                    pclPoint.normal_y = normal.y / 1000;    //to [m]
-                    pclPoint.normal_z = normal.z / 1000;    //to [m]
-                }
-                cloud->at(c, r) = pclPoint;
-            }
-        }
-        return cloud;
+        return getPointCloudFromFrame(frame, true);
     }
 
-    std::shared_ptr<pcl::PointCloud<pcl::PointNormal>> PhoXiInterface::getUnorganizedCloudFromFrame(pho::api::PFrame frame) {
-        if (!frame || !frame->Successful) {
-            throw CorruptedFrame("Corrupted frame!");
-        }
-        std::shared_ptr<pcl::PointCloud<pcl::PointNormal>> cloud(new pcl::PointCloud<pcl::PointNormal>());
-        for (int r = 0; r < frame->GetResolution().Height; r++) {
-            for (int c = 0; c < frame->GetResolution().Width; c++) {
-                auto point = frame->PointCloud.At(r, c);
-                if (point == pho::api::Point3_32f(0, 0, 0)) {
-                    continue;
-                }
-                pcl::PointNormal pclPoint;
-                pclPoint.x = point.x / 1000;                 //to [m]
-                pclPoint.y = point.y / 1000;                 //to [m]
-                pclPoint.z = point.z / 1000;                 //to [m]
-                if (!frame->NormalMap.Empty()) {
-                    auto normal = frame->NormalMap.At(r, c);
-                    pclPoint.normal_x = normal.x / 1000;    //to [m]
-                    pclPoint.normal_y = normal.y / 1000;    //to [m]
-                    pclPoint.normal_z = normal.z / 1000;    //to [m]
-                }
-                cloud->push_back(pclPoint);
-            }
-        }
-        return cloud;
+    std::shared_ptr<pcl::PointCloud<pcl::PointXYZRGBNormal>> PhoXiInterface::getUnorganizedCloudFromFrame(pho::api::PFrame frame) {
+        return getPointCloudFromFrame(frame, false);
     }
 
     void PhoXiInterface::isOk() {
